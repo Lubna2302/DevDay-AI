@@ -2,119 +2,76 @@ package com.devday.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * Global Exception Handler
- * Handles all exceptions and returns consistent JSON error responses
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Handle generic exceptions
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGlobalException(
-            Exception ex, WebRequest request) {
-        
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", Instant.now().toString());
-        errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errorResponse.put("error", "Internal Server Error");
-        errorResponse.put("message", ex.getMessage());
-        errorResponse.put("path", request.getDescription(false).replace("uri=", ""));
-        
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorResponse);
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
+        List<String> details = new ArrayList<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(error -> details.add(error.getDefaultMessage()));
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody(
+                "VALIDATION_ERROR", "Invalid input data", details));
     }
 
-    /**
-     * Handle IllegalArgumentException
-     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(
             IllegalArgumentException ex, WebRequest request) {
-        
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", Instant.now().toString());
-        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-        errorResponse.put("error", "Bad Request");
-        errorResponse.put("message", ex.getMessage());
-        errorResponse.put("path", request.getDescription(false).replace("uri=", ""));
-        
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(errorResponse);
-    /**
-     * Handle validation errors
-     */
-    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationException(
-            org.springframework.web.bind.MethodArgumentNotValidException ex) {
-        
-        java.util.List<String> details = new java.util.ArrayList<>();
-        for (org.springframework.validation.FieldError error : ex.getBindingResult().getFieldErrors()) {
-            details.add(error.getDefaultMessage());
-        }
-        
-        Map<String, Object> errorObj = new HashMap<>();
-        errorObj.put("code", "VALIDATION_ERROR");
-        errorObj.put("message", "Invalid input data");
-        errorObj.put("details", details);
-        
-        Map<String, Object> body = new HashMap<>();
-        body.put("error", errorObj);
-        body.put("timestamp", Instant.now().toString());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody(
+                "INVALID_REQUEST", ex.getMessage(), List.of()));
     }
 
-    /**
-     * Handle authentication errors
-     */
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(
             org.springframework.security.core.AuthenticationException ex) {
-        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody(
+                "UNAUTHORIZED", "Authentication failed", List.of(ex.getMessage())));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Request failed";
+        HttpStatus status = HttpStatus.CONFLICT;
+        String code = "CONFLICT";
+
+        if (message.contains("Invalid email or password") || message.contains("not found")) {
+            status = message.contains("password") ? HttpStatus.UNAUTHORIZED : HttpStatus.NOT_FOUND;
+            code = status == HttpStatus.UNAUTHORIZED ? "UNAUTHORIZED" : "NOT_FOUND";
+        } else if (message.contains("already registered") || message.contains("already has an active")) {
+            status = HttpStatus.CONFLICT;
+            code = "CONFLICT";
+        }
+
+        return ResponseEntity.status(status).body(errorBody(code, message, List.of()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody(
+                "INTERNAL_ERROR", ex.getMessage(), List.of()));
+    }
+
+    private Map<String, Object> errorBody(String code, String message, List<String> details) {
         Map<String, Object> errorObj = new HashMap<>();
-        errorObj.put("code", "UNAUTHORIZED");
-        errorObj.put("message", "Authentication failed");
-        errorObj.put("details", java.util.List.of(ex.getMessage()));
-        
+        errorObj.put("code", code);
+        errorObj.put("message", message);
+        errorObj.put("details", details);
+
         Map<String, Object> body = new HashMap<>();
         body.put("error", errorObj);
         body.put("timestamp", Instant.now().toString());
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
-    }
-    }
-
-    /**
-     * Handle RuntimeException
-     */
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, Object>> handleRuntimeException(
-            RuntimeException ex, WebRequest request) {
-        
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", Instant.now().toString());
-        errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errorResponse.put("error", "Runtime Error");
-        errorResponse.put("message", ex.getMessage());
-        errorResponse.put("path", request.getDescription(false).replace("uri=", ""));
-        
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorResponse);
+        return body;
     }
 }
-
-// Made with Bob

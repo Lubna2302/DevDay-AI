@@ -30,7 +30,7 @@ export default function TodayHeader() {
               background: 'var(--accent-lime)',
               boxShadow: '0 0 6px var(--accent-lime)'
             }}></span>
-            Mock integrations connected
+            Live API connected
           </div>
         </div>
       </div>

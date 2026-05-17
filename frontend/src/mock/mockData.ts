@@ -183,6 +183,72 @@ export const mockWeeklySummary: WeeklySummary = {
   status: 'draft',
 };
 
+export function generateDailySummary(input: {
+  tasks: Task[];
+  workLogs: WorkLog[];
+  blockers: Blocker[];
+  openLoops: OpenLoop[];
+}): DailySummary {
+  const completedTasks = input.tasks.filter((t) => t.status === 'done');
+  const inProgressTasks = input.tasks.filter((t) => t.status === 'in_progress');
+  const activeBlockers = input.blockers.filter((b) => b.status === 'active');
+
+  return {
+    id: `daily-${Date.now()}`,
+    date: new Date().toISOString().split('T')[0],
+    whatIWorkedOn:
+      input.tasks
+        .slice(0, 3)
+        .map((t) => t.title)
+        .join(', ') || 'Various development tasks',
+    completedWork:
+      completedTasks.length > 0
+        ? `Completed ${completedTasks.length} task(s): ${completedTasks.map((t) => t.title).join(', ')}`
+        : 'Made progress on ongoing tasks',
+    inProgressWork:
+      inProgressTasks.length > 0
+        ? `Working on ${inProgressTasks.length} task(s): ${inProgressTasks.map((t) => t.title).join(', ')}`
+        : 'No tasks currently in progress',
+    blockers:
+      activeBlockers.length > 0
+        ? activeBlockers.map((b) => b.description).join('. ')
+        : 'No active blockers',
+    collaboration:
+      input.workLogs
+        .filter((w) => w.type === 'helped_teammate' || w.type === 'meeting')
+        .map((w) => w.description)
+        .join('. ') || 'Collaborated with team on various tasks',
+    tomorrowPlan: 'Continue with in-progress tasks and address any blockers',
+    leadFriendlySummary: `Made progress on ${input.tasks.length} tasks today.`,
+    status: 'draft',
+  };
+}
+
+export function generateWeeklySummary(input: {
+  dailySummaries?: DailySummary[];
+  tasks?: Task[];
+  workLogs?: WorkLog[];
+}): WeeklySummary {
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const completedTasks = input.tasks?.filter((t) => t.status === 'done') || [];
+
+  return {
+    id: `weekly-${Date.now()}`,
+    weekStartDate: weekStart.toISOString().split('T')[0],
+    weekEndDate: weekEnd.toISOString().split('T')[0],
+    mainOutcomes: `Delivered ${completedTasks.length} completed items this week.`,
+    progressMade: 'Advanced key initiatives across the codebase.',
+    collaboration: 'Supported team members with reviews and pairing.',
+    blockersAndRisks: 'Some items blocked on external dependencies.',
+    nextWeekFocus: 'Continue high-priority features and clear blockers.',
+    status: 'draft',
+  };
+}
+
 // Mock Today Data (aggregate)
 export const mockTodayData: TodayData = {
   date: '2026-05-16',

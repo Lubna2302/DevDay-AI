@@ -1,7 +1,10 @@
+import LoginGate from '@/components/auth/LoginGate';
 import TodayDashboard from '@/components/dashboard/TodayDashboard';
 
 export default function Home() {
-  return <TodayDashboard />;
+  return (
+    <LoginGate>
+      <TodayDashboard />
+    </LoginGate>
+  );
 }
-
-// Made with Bob

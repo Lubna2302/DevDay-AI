@@ -126,11 +126,25 @@ export default function TaskCard({ task, onSetFocus, onMarkDone, onToggleComplet
             </div>
           )}
 
-          {/* Completed indicator */}
+          {/* Completed indicator with undo button */}
           {isCompleted && (
-            <div className="text-xs text-success flex items-center gap-1 mt-2">
-              <span>✓</span>
-              <span>Completed</span>
+            <div className="flex items-center justify-between mt-3">
+              <div className="text-xs text-success flex items-center gap-1">
+                <span>✓</span>
+                <span>Completed</span>
+              </div>
+              {onToggleComplete && (
+                <button
+                  onClick={handleCheckboxChange}
+                  className="text-xs text-muted hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-card-hover"
+                  title="Mark as incomplete"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  <span>Undo</span>
+                </button>
+              )}
             </div>
           )}
         </div>

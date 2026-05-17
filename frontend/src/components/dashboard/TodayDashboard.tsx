@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import TodayHeader from './TodayHeader';
 import TaskList from '@/components/tasks/TaskList';
 import ManualTaskForm from '@/components/tasks/ManualTaskForm';
@@ -13,8 +13,22 @@ import WorkLogFeed from '@/components/worklog/WorkLogFeed';
 import BlockerPanel from '@/components/blockers/BlockerPanel';
 import DailySummaryEditor from '@/components/summary/DailySummaryEditor';
 import WeeklySummaryEditor from '@/components/summary/WeeklySummaryEditor';
+import FinalDraftPanel from '@/components/summary/FinalDraftPanel';
 import type { TodayData, Task, FocusSession, OpenLoop, WorkLog, Blocker, DailySummary, WeeklySummary } from '@/types';
-import { getTodayData, addWorkLog, addBlocker, resolveBlocker, generateDailySummary, generateWeeklySummary } from '@/services/api';
+import {
+  getTodayData,
+  getFreshMockTodayData,
+  addWorkLog,
+  addBlocker,
+  resolveBlocker,
+  generateDailySummary,
+  generateWeeklySummary,
+  createTask,
+  updateTaskStatus,
+  startFocusSession,
+  completeFocusSession,
+  pauseFocusSession,
+} from '@/services/api';
 
 export default function TodayDashboard() {
   const [todayData, setTodayData] = useState<TodayData | null>(null);
@@ -31,16 +45,89 @@ export default function TodayDashboard() {
   const [showSwitchGuard, setShowSwitchGuard] = useState(false);
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
 
+  const isBackendId = (id?: string) => Boolean(id && /^\d+$/.test(id));
+  const isMockTodayData = () => todayData?.tasks.some((task) => !isBackendId(task.id)) ?? false;
+
+  const updateTaskStatusLocally = useCallback((taskId: string, status: Task['status']) => {
+    setTodayData((current) =>
+      current
+        ? {
+            ...current,
+            tasks: current.tasks.map((task) =>
+              task.id === taskId ? { ...task, status } : task
+            ),
+          }
+        : current
+    );
+    setActiveFocusTask((current) =>
+      current?.id === taskId ? { ...current, status } : current
+    );
+  }, []);
+
+  const addWorkLogLocally = useCallback((logInput: {
+    type: WorkLog['type'];
+    relatedTaskId?: string;
+    description: string;
+  }) => {
+    const newLog: WorkLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      type: logInput.type,
+      relatedTaskId: logInput.relatedTaskId,
+      description: logInput.description,
+      createdAt: new Date().toISOString(),
+    };
+    setWorkLogs((current) => [newLog, ...current]);
+  }, []);
+
+  const addBlockerLocally = useCallback((blockerInput: {
+    relatedTaskId?: string;
+    description: string;
+  }) => {
+    const newBlocker: Blocker = {
+      id: `blocker-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      relatedTaskId: blockerInput.relatedTaskId,
+      description: blockerInput.description,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    };
+    setBlockers((current) => [newBlocker, ...current]);
+
+    if (blockerInput.relatedTaskId) {
+      updateTaskStatusLocally(blockerInput.relatedTaskId, 'blocked');
+    }
+  }, [updateTaskStatusLocally]);
+
+  const applyTodayData = useCallback((data: TodayData) => {
+    setTodayData(data);
+    setOpenLoops(data.openLoops || []);
+    setWorkLogs(data.workLogs || []);
+    setBlockers(data.blockers || []);
+    setDailySummary(data.dailySummary || null);
+    setWeeklySummary(data.weeklySummary || null);
+    if (data.focusSession) {
+      const task = data.tasks.find((t) => t.id === data.focusSession!.taskId);
+      setFocusSession(data.focusSession);
+      setActiveFocusTask(task ?? null);
+    } else {
+      setFocusSession(null);
+      setActiveFocusTask(null);
+    }
+  }, []);
+
+  const refreshToday = useCallback(async () => {
+    const data = await getTodayData();
+    applyTodayData(data);
+  }, [applyTodayData]);
+
+  const refreshTodayWithMockData = useCallback(async () => {
+    const data = await getFreshMockTodayData();
+    applyTodayData(data);
+  }, [applyTodayData]);
+
   useEffect(() => {
     async function loadData() {
       try {
-        const data = await getTodayData();
-        setTodayData(data);
-        setOpenLoops(data.openLoops || []);
-        setWorkLogs(data.workLogs || []);
-        setBlockers(data.blockers || []);
-        setDailySummary(data.dailySummary || null);
-        setWeeklySummary(data.weeklySummary || null);
+        await refreshToday();
       } catch (error) {
         console.error('Failed to load today data:', error);
       } finally {
@@ -48,14 +135,19 @@ export default function TodayDashboard() {
       }
     }
     loadData();
-  }, []);
+  }, [refreshToday]);
 
-  const handleAddTask = (newTask: Task) => {
-    if (todayData) {
-      setTodayData({
-        ...todayData,
-        tasks: [...todayData.tasks, newTask],
+  const handleAddTask = async (newTask: Task) => {
+    try {
+      await createTask({
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        source: 'manual',
       });
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to add task:', error);
     }
   };
 
@@ -82,52 +174,108 @@ export default function TodayDashboard() {
     }
   };
 
-  const handleStartSession = (session: FocusSession, task: Task) => {
-    setFocusSession(session);
-    setActiveFocusTask(task);
-    // Update task status to in_progress
-    if (todayData) {
-      setTodayData({
-        ...todayData,
-        tasks: todayData.tasks.map((t) =>
-          t.id === task.id ? { ...t, status: 'in_progress' } : t
-        ),
+  const handleStartSession = async (session: FocusSession, task: Task) => {
+    if (!isBackendId(task.id)) {
+      const localSession: FocusSession = {
+        ...session,
+        id: `focus-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        taskId: task.id,
+        status: 'active',
+        startedAt: new Date().toISOString(),
+      };
+      setFocusSession(localSession);
+      setActiveFocusTask({ ...task, status: 'in_progress' });
+      updateTaskStatusLocally(task.id, 'in_progress');
+      return;
+    }
+
+    try {
+      await startFocusSession({
+        taskId: task.id,
+        durationMinutes: session.durationMinutes,
+        goal: session.goal,
       });
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to start focus session:', error);
     }
   };
 
-  const handleCompleteFocus = () => {
-    if (activeFocusTask && todayData) {
-      setTodayData({
-        ...todayData,
-        tasks: todayData.tasks.map((t) =>
-          t.id === activeFocusTask.id ? { ...t, status: 'done' } : t
-        ),
-      });
-      setActiveFocusTask(null);
+  const handleCompleteFocus = async () => {
+    if (!focusSession) return;
+
+    if (!isBackendId(focusSession.id)) {
+      if (activeFocusTask) {
+        updateTaskStatusLocally(activeFocusTask.id, 'done');
+      }
       setFocusSession(null);
+      setActiveFocusTask(null);
+      return;
+    }
+
+    try {
+      await completeFocusSession(focusSession.id);
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to complete focus session:', error);
     }
   };
 
-  const handlePauseFocus = () => {
-    console.log('Pause focus session');
-    // TODO: Implement pause logic with open loop creation
-    if (focusSession) {
+  const handlePauseFocus = async () => {
+    if (!focusSession || !activeFocusTask) return;
+
+    if (!isBackendId(focusSession.id)) {
+      const openLoop: OpenLoop = {
+        id: `loop-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        taskId: activeFocusTask.id,
+        taskTitle: activeFocusTask.title,
+        status: 'paused',
+        currentState: `Paused while working on ${activeFocusTask.title}`,
+        nextAction: 'Resume from the open loops panel.',
+        createdAt: new Date().toISOString(),
+      };
+      setOpenLoops((current) => [openLoop, ...current]);
+      updateTaskStatusLocally(activeFocusTask.id, 'paused');
       setFocusSession({ ...focusSession, status: 'paused' });
+      setActiveFocusTask(null);
+      return;
+    }
+
+    try {
+      await pauseFocusSession({
+        focusSessionId: focusSession.id,
+        context: `Paused while working on ${activeFocusTask.title}`,
+        reason: 'Check open loops panel to resume',
+      });
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to pause focus session:', error);
     }
   };
 
-  const handleBlockedFocus = () => {
-    if (activeFocusTask && todayData) {
-      setTodayData({
-        ...todayData,
-        tasks: todayData.tasks.map((t) =>
-          t.id === activeFocusTask.id ? { ...t, status: 'blocked' } : t
-        ),
-      });
+  const handleBlockedFocus = async () => {
+    if (!activeFocusTask) return;
+
+    if (!isBackendId(activeFocusTask.id)) {
+      updateTaskStatusLocally(activeFocusTask.id, 'blocked');
       if (focusSession) {
         setFocusSession({ ...focusSession, status: 'blocked' });
       }
+      return;
+    }
+
+    try {
+      await updateTaskStatus(activeFocusTask.id, 'blocked');
+      if (focusSession) {
+        await pauseFocusSession({
+          focusSessionId: focusSession.id,
+          context: 'Marked as blocked from focus panel',
+          reason: 'Resolve blocker before continuing',
+        });
+      }
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to mark blocked:', error);
     }
   };
 
@@ -140,129 +288,102 @@ export default function TodayDashboard() {
     }
   };
 
-  const handleMarkDone = (taskId: string) => {
-    if (todayData) {
-      setTodayData({
-        ...todayData,
-        tasks: todayData.tasks.map((task) =>
-          task.id === taskId ? { ...task, status: 'done' } : task
-        ),
-      });
+  const handleMarkDone = async (taskId: string) => {
+    if (!isBackendId(taskId)) {
+      updateTaskStatusLocally(taskId, 'done');
+      return;
+    }
+
+    try {
+      await updateTaskStatus(taskId, 'done');
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to mark task done:', error);
     }
   };
 
-  const handleToggleComplete = (taskId: string, currentStatus: string) => {
-    if (todayData) {
-      const newStatus = currentStatus === 'done' ? 'todo' : 'done';
-      setTodayData({
-        ...todayData,
-        tasks: todayData.tasks.map((task) =>
-          task.id === taskId ? { ...task, status: newStatus } : task
-        ),
-      });
+  const handleToggleComplete = async (taskId: string, currentStatus: string) => {
+    const newStatus: Task['status'] = currentStatus === 'done' ? 'todo' : 'done';
+
+    if (!isBackendId(taskId)) {
+      updateTaskStatusLocally(taskId, newStatus);
+      return;
+    }
+
+    try {
+      await updateTaskStatus(taskId, newStatus);
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed to update task status:', error);
     }
   };
 
   // Switch Guard Modal Handlers
-  const handleSwitchComplete = () => {
-    if (!activeFocusTask || !pendingTask || !todayData) return;
-
-    // Mark current task as done
-    setTodayData({
-      ...todayData,
-      tasks: todayData.tasks.map((t) =>
-        t.id === activeFocusTask.id
-          ? { ...t, status: 'done' }
-          : t.id === pendingTask.id
-          ? { ...t, status: 'in_progress' }
-          : t
-      ),
-    });
-
-    // Switch to new task
-    setActiveFocusTask(pendingTask);
-    setFocusSession(null);
-    setShowSwitchGuard(false);
-    setPendingTask(null);
-  };
-
-  const handleSwitchPauseWithNote = (openLoop: OpenLoop) => {
-    if (!activeFocusTask || !pendingTask || !todayData) return;
-
-    // Add open loop
-    setOpenLoops([...openLoops, openLoop]);
-
-    // Mark current task as paused
-    setTodayData({
-      ...todayData,
-      tasks: todayData.tasks.map((t) =>
-        t.id === activeFocusTask.id
-          ? { ...t, status: 'paused' }
-          : t.id === pendingTask.id
-          ? { ...t, status: 'in_progress' }
-          : t
-      ),
-    });
-
-    // Switch to new task
-    setActiveFocusTask(pendingTask);
-    if (focusSession) {
-      setFocusSession({ ...focusSession, status: 'paused' });
+  const handleSwitchComplete = async () => {
+    if (!activeFocusTask || !pendingTask || !focusSession) return;
+    try {
+      await completeFocusSession(focusSession.id);
+      await updateTaskStatus(activeFocusTask.id, 'done');
+      await updateTaskStatus(pendingTask.id, 'in_progress');
+      setShowSwitchGuard(false);
+      setPendingTask(null);
+      await refreshToday();
+      setActiveFocusTask(pendingTask);
+    } catch (error) {
+      console.error('Failed switch complete:', error);
     }
-    setShowSwitchGuard(false);
-    setPendingTask(null);
   };
 
-  const handleSwitchBlocked = () => {
-    if (!activeFocusTask || !pendingTask || !todayData) return;
-
-    // Create open loop for blocked task
-    const blockedLoop: OpenLoop = {
-      id: `loop-${Date.now()}`,
-      taskId: activeFocusTask.id,
-      taskTitle: activeFocusTask.title,
-      status: 'blocked',
-      currentState: 'Task is blocked',
-      nextAction: 'Resolve blocker before continuing',
-      createdAt: new Date().toISOString(),
-    };
-    setOpenLoops([...openLoops, blockedLoop]);
-
-    // Mark current task as blocked
-    setTodayData({
-      ...todayData,
-      tasks: todayData.tasks.map((t) =>
-        t.id === activeFocusTask.id
-          ? { ...t, status: 'blocked' }
-          : t.id === pendingTask.id
-          ? { ...t, status: 'in_progress' }
-          : t
-      ),
-    });
-
-    // Switch to new task
-    setActiveFocusTask(pendingTask);
-    if (focusSession) {
-      setFocusSession({ ...focusSession, status: 'blocked' });
+  const handleSwitchPauseWithNote = async (openLoop: OpenLoop) => {
+    if (!activeFocusTask || !pendingTask || !focusSession) return;
+    try {
+      await pauseFocusSession({
+        focusSessionId: focusSession.id,
+        context: openLoop.currentState,
+        reason: openLoop.nextAction,
+        toTaskId: pendingTask.id,
+      });
+      await updateTaskStatus(activeFocusTask.id, 'paused');
+      await updateTaskStatus(pendingTask.id, 'in_progress');
+      setShowSwitchGuard(false);
+      setPendingTask(null);
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed switch pause:', error);
     }
-    setShowSwitchGuard(false);
-    setPendingTask(null);
   };
 
-  const handleSwitchAnyway = () => {
-    if (!pendingTask || !todayData) return;
+  const handleSwitchBlocked = async () => {
+    if (!activeFocusTask || !pendingTask || !focusSession) return;
+    try {
+      await pauseFocusSession({
+        focusSessionId: focusSession.id,
+        context: 'Task is blocked',
+        reason: 'Resolve blocker before continuing',
+        toTaskId: pendingTask.id,
+      });
+      await updateTaskStatus(activeFocusTask.id, 'blocked');
+      await updateTaskStatus(pendingTask.id, 'in_progress');
+      setShowSwitchGuard(false);
+      setPendingTask(null);
+      await refreshToday();
+    } catch (error) {
+      console.error('Failed switch blocked:', error);
+    }
+  };
 
-    // Just switch without creating open loop
-    setTodayData({
-      ...todayData,
-      tasks: todayData.tasks.map((t) =>
-        t.id === pendingTask.id ? { ...t, status: 'in_progress' } : t
-      ),
-    });
-
-    setActiveFocusTask(pendingTask);
-    setShowSwitchGuard(false);
-    setPendingTask(null);
+  const handleSwitchAnyway = async () => {
+    if (!pendingTask || !focusSession) return;
+    try {
+      await completeFocusSession(focusSession.id);
+      await updateTaskStatus(pendingTask.id, 'in_progress');
+      setShowSwitchGuard(false);
+      setPendingTask(null);
+      await refreshToday();
+      setActiveFocusTask(pendingTask);
+    } catch (error) {
+      console.error('Failed switch anyway:', error);
+    }
   };
 
   const handleSwitchCancel = () => {
@@ -327,9 +448,14 @@ export default function TodayDashboard() {
     relatedTaskId?: string;
     description: string;
   }) => {
+    if (isMockTodayData() || Boolean(logInput.relatedTaskId && !isBackendId(logInput.relatedTaskId))) {
+      addWorkLogLocally(logInput);
+      return;
+    }
+
     try {
-      const newLog = await addWorkLog(logInput);
-      setWorkLogs([...workLogs, newLog]);
+      await addWorkLog(logInput);
+      await refreshToday();
     } catch (error) {
       console.error('Failed to add work log:', error);
     }
@@ -340,81 +466,34 @@ export default function TodayDashboard() {
     relatedTaskId?: string;
     description: string;
   }) => {
+    if (isMockTodayData() || Boolean(blockerInput.relatedTaskId && !isBackendId(blockerInput.relatedTaskId))) {
+      addBlockerLocally(blockerInput);
+      return;
+    }
+
     try {
-      const newBlocker = await addBlocker(blockerInput);
-      setBlockers([...blockers, newBlocker]);
-
-      // If blocker is related to a task, update task status to blocked
-      if (blockerInput.relatedTaskId && todayData) {
-        const task = todayData.tasks.find((t) => t.id === blockerInput.relatedTaskId);
-        if (task) {
-          // Update task status to blocked
-          setTodayData({
-            ...todayData,
-            tasks: todayData.tasks.map((t) =>
-              t.id === blockerInput.relatedTaskId ? { ...t, status: 'blocked' } : t
-            ),
-          });
-
-          // Add or update open loop for the blocked task
-          const existingLoop = openLoops.find((loop) => loop.taskId === blockerInput.relatedTaskId);
-          if (!existingLoop) {
-            const newOpenLoop: OpenLoop = {
-              id: `loop-${Date.now()}`,
-              taskId: task.id,
-              taskTitle: task.title,
-              status: 'blocked',
-              currentState: 'Task is blocked',
-              nextAction: blockerInput.description,
-              blocker: blockerInput.description,
-              createdAt: new Date().toISOString(),
-            };
-            setOpenLoops([...openLoops, newOpenLoop]);
-          } else {
-            // Update existing open loop to blocked status
-            setOpenLoops(
-              openLoops.map((loop) =>
-                loop.taskId === blockerInput.relatedTaskId
-                  ? { ...loop, status: 'blocked', blocker: blockerInput.description }
-                  : loop
-              )
-            );
-          }
-        }
-      }
+      await addBlocker(blockerInput);
+      await refreshToday();
     } catch (error) {
       console.error('Failed to add blocker:', error);
     }
   };
 
   const handleResolveBlocker = async (blockerId: string) => {
-    try {
-      const resolvedBlocker = await resolveBlocker(blockerId);
-      
-      // Update blocker in state
-      setBlockers(
-        blockers.map((b) =>
-          b.id === blockerId
-            ? { ...b, status: 'resolved', resolvedAt: resolvedBlocker.resolvedAt }
-            : b
+    if (!isBackendId(blockerId)) {
+      setBlockers((current) =>
+        current.map((blocker) =>
+          blocker.id === blockerId
+            ? { ...blocker, status: 'resolved', resolvedAt: new Date().toISOString() }
+            : blocker
         )
       );
+      return;
+    }
 
-      // Find the blocker to get related task
-      const blocker = blockers.find((b) => b.id === blockerId);
-      if (blocker?.relatedTaskId && todayData) {
-        const task = todayData.tasks.find((t) => t.id === blocker.relatedTaskId);
-        if (task && task.status === 'blocked') {
-          // Move task back to todo or paused
-          const newStatus = task.status === 'blocked' ? 'todo' : task.status;
-          setTodayData({
-            ...todayData,
-            tasks: todayData.tasks.map((t) =>
-              t.id === blocker.relatedTaskId ? { ...t, status: newStatus } : t
-            ),
-          });
-        }
-      }
+    try {
+      await resolveBlocker(blockerId);
+      await refreshToday();
     } catch (error) {
       console.error('Failed to resolve blocker:', error);
     }
@@ -471,6 +550,15 @@ export default function TodayDashboard() {
     setWeeklySummary(summary);
   };
 
+  // Final Draft Handlers
+  const handleCopyDailyDraft = () => {
+    console.log('Daily draft copied to clipboard');
+  };
+
+  const handleCopyWeeklyDraft = () => {
+    console.log('Weekly draft copied to clipboard');
+  };
+
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -516,7 +604,7 @@ export default function TodayDashboard() {
         {/* Hero Stats Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="stat-card">
-            <div className="stat-label">Today's Work</div>
+            <div className="stat-label">Today&apos;s Work</div>
             <div className="stat-value">{stats.todaysWork}</div>
             <div className="text-xs text-muted">Tasks & meetings</div>
           </div>
@@ -547,10 +635,24 @@ export default function TodayDashboard() {
             {/* Today's Work Section */}
             <div className="card">
               <div className="card-header">
-                <h2 className="card-title">Today's Work</h2>
-                <p className="card-subtitle">
-                  Tasks from Jira, GitHub, Calendar, Teams, and manual entries
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="card-title">Today&apos;s Work</h2>
+                    <p className="card-subtitle">
+                      Tasks from Jira, GitHub, Calendar, Teams, and manual entries
+                    </p>
+                  </div>
+                  <button
+                    onClick={refreshTodayWithMockData}
+                    className="px-3 py-1.5 text-sm font-medium text-foreground-muted hover:text-foreground bg-card-hover rounded-lg transition-colors flex items-center gap-2"
+                    title="Refresh tasks"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                  </button>
+                </div>
               </div>
               <div className="mb-4">
                 <ManualTaskForm onAddTask={handleAddTask} />
@@ -594,7 +696,7 @@ export default function TodayDashboard() {
               <div className="card-header">
                 <h2 className="card-title">Work Log</h2>
                 <p className="card-subtitle">
-                  Manual notes about what you're working on
+                  Manual notes about what you&apos;re working on
                 </p>
               </div>
               <div className="mb-4">
@@ -634,6 +736,14 @@ export default function TodayDashboard() {
               onGenerate={handleGenerateWeeklySummary}
               onSave={handleSaveWeeklySummary}
               isGenerating={isGeneratingWeeklySummary}
+            />
+
+            {/* Final Draft Section */}
+            <FinalDraftPanel
+              dailySummary={dailySummary}
+              weeklySummary={weeklySummary}
+              onCopyDaily={handleCopyDailyDraft}
+              onCopyWeekly={handleCopyWeeklyDraft}
             />
 
             {/* Blockers Section */}

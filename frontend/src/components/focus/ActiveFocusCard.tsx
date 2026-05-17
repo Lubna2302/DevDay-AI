@@ -32,27 +32,27 @@ export default function ActiveFocusCard({
   }
 
   const sourceColors: Record<string, string> = {
-    jira: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    github: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    bitbucket: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-    calendar: 'bg-green-500/10 text-green-400 border-green-500/20',
-    teams: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-    manual: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+    jira: 'badge-jira',
+    github: 'badge-github',
+    bitbucket: 'badge-bitbucket',
+    calendar: 'badge-calendar',
+    teams: 'badge-teams',
+    manual: 'badge-manual',
   };
 
   const statusColors: Record<string, string> = {
-    todo: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-    in_progress: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    done: 'bg-green-500/10 text-green-400 border-green-500/20',
-    blocked: 'bg-red-500/10 text-red-400 border-red-500/20',
-    paused: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    todo: 'badge-muted',
+    in_progress: 'badge-warning',
+    done: 'badge-success',
+    blocked: 'badge-danger',
+    paused: 'badge-muted',
   };
 
   const priorityColors: Record<string, string> = {
-    urgent: 'bg-red-500/10 text-red-400 border-red-500/20',
-    high: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    medium: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    low: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+    urgent: 'badge-danger',
+    high: 'badge-warning',
+    medium: 'badge-info',
+    low: 'badge-muted',
   };
 
   const sourceColor = sourceColors[task.source] || sourceColors.manual;
@@ -62,7 +62,10 @@ export default function ActiveFocusCard({
   return (
     <div className="space-y-4">
       {/* Task Info */}
-      <div className="card bg-gradient-to-br from-blue-500/5 to-violet-500/5 border-blue-500/20">
+      <div className="card focus-active" style={{
+        background: 'var(--surface)',
+        borderColor: 'rgba(214, 255, 107, 0.2)'
+      }}>
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span className={`badge ${sourceColor}`}>
             {getSourceLabel(task.source)}
@@ -95,7 +98,7 @@ export default function ActiveFocusCard({
           <div className="mt-4 pt-4 border-t border-card-border">
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <div className="text-xs text-muted uppercase tracking-wide mb-1">
+                <div className="text-xs text-foreground-muted uppercase tracking-wide mb-1">
                   Duration
                 </div>
                 <div className="text-lg font-semibold text-primary">
@@ -103,17 +106,17 @@ export default function ActiveFocusCard({
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted uppercase tracking-wide mb-1">
+                <div className="text-xs text-foreground-muted uppercase tracking-wide mb-1">
                   Status
                 </div>
-                <div className="text-lg font-semibold text-violet-400">
+                <div className="text-lg font-semibold" style={{ color: 'var(--muted-accent)' }}>
                   {getStatusLabel(session.status)}
                 </div>
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-muted uppercase tracking-wide mb-1">
+              <div className="text-xs text-foreground-muted uppercase tracking-wide mb-1">
                 Focus Goal
               </div>
               <p className="text-sm text-foreground">
@@ -128,27 +131,27 @@ export default function ActiveFocusCard({
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={onComplete}
-          className="btn btn-primary text-sm"
+          className="btn btn-primary btn-sm"
           disabled={task.status === 'done'}
         >
           ✓ Complete
         </button>
         <button
           onClick={onBlocked}
-          className="btn btn-outline text-sm"
+          className="btn btn-outline btn-sm"
           disabled={task.status === 'blocked'}
         >
           🚧 Blocked
         </button>
         <button
           onClick={onPause}
-          className="btn btn-outline text-sm"
+          className="btn btn-outline btn-sm"
         >
           ⏸ Pause
         </button>
         <button
           onClick={onExtend}
-          className="btn btn-outline text-sm"
+          className="btn btn-outline btn-sm"
           disabled={!session}
         >
           ⏱ +15 min

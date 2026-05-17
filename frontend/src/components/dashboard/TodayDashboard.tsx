@@ -7,8 +7,14 @@ import ManualTaskForm from '@/components/tasks/ManualTaskForm';
 import ActiveFocusCard from '@/components/focus/ActiveFocusCard';
 import FocusSessionForm from '@/components/focus/FocusSessionForm';
 import SwitchGuardModal from '@/components/focus/SwitchGuardModal';
-import type { TodayData, Task, FocusSession, OpenLoop } from '@/types';
-import { getTodayData } from '@/services/api';
+import OpenLoopsPanel from '@/components/openloops/OpenLoopsPanel';
+import WorkLogComposer from '@/components/worklog/WorkLogComposer';
+import WorkLogFeed from '@/components/worklog/WorkLogFeed';
+import BlockerPanel from '@/components/blockers/BlockerPanel';
+import DailySummaryEditor from '@/components/summary/DailySummaryEditor';
+import WeeklySummaryEditor from '@/components/summary/WeeklySummaryEditor';
+import type { TodayData, Task, FocusSession, OpenLoop, WorkLog, Blocker, DailySummary, WeeklySummary } from '@/types';
+import { getTodayData, addWorkLog, addBlocker, resolveBlocker, generateDailySummary, generateWeeklySummary } from '@/services/api';
 
 export default function TodayDashboard() {
   const [todayData, setTodayData] = useState<TodayData | null>(null);
@@ -16,6 +22,12 @@ export default function TodayDashboard() {
   const [activeFocusTask, setActiveFocusTask] = useState<Task | null>(null);
   const [focusSession, setFocusSession] = useState<FocusSession | null>(null);
   const [openLoops, setOpenLoops] = useState<OpenLoop[]>([]);
+  const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
+  const [blockers, setBlockers] = useState<Blocker[]>([]);
+  const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
+  const [weeklySummary, setWeeklySummary] = useState<WeeklySummary | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isGeneratingWeeklySummary, setIsGeneratingWeeklySummary] = useState(false);
   const [showSwitchGuard, setShowSwitchGuard] = useState(false);
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
 
@@ -25,6 +37,10 @@ export default function TodayDashboard() {
         const data = await getTodayData();
         setTodayData(data);
         setOpenLoops(data.openLoops || []);
+        setWorkLogs(data.workLogs || []);
+        setBlockers(data.blockers || []);
+        setDailySummary(data.dailySummary || null);
+        setWeeklySummary(data.weeklySummary || null);
       } catch (error) {
         console.error('Failed to load today data:', error);
       } finally {
@@ -130,6 +146,18 @@ export default function TodayDashboard() {
         ...todayData,
         tasks: todayData.tasks.map((task) =>
           task.id === taskId ? { ...task, status: 'done' } : task
+        ),
+      });
+    }
+  };
+
+  const handleToggleComplete = (taskId: string, currentStatus: string) => {
+    if (todayData) {
+      const newStatus = currentStatus === 'done' ? 'todo' : 'done';
+      setTodayData({
+        ...todayData,
+        tasks: todayData.tasks.map((task) =>
+          task.id === taskId ? { ...task, status: newStatus } : task
         ),
       });
     }
@@ -242,6 +270,207 @@ export default function TodayDashboard() {
     setPendingTask(null);
   };
 
+  // Open Loops Handlers
+  const handleResumeOpenLoop = (openLoop: OpenLoop) => {
+    if (!todayData) return;
+
+    // Find the task associated with this open loop
+    const task = todayData.tasks.find((t) => t.id === openLoop.taskId);
+    if (!task) return;
+
+    // Check if there's already an active focus task
+    if (activeFocusTask && activeFocusTask.id !== task.id) {
+      // Show switch guard modal
+      setPendingTask(task);
+      setShowSwitchGuard(true);
+      // Remove the open loop after switch guard completes
+      // (The switch guard handlers will handle the task switching)
+      setOpenLoops(openLoops.filter((loop) => loop.id !== openLoop.id));
+      return;
+    }
+
+    // No active focus, proceed normally
+    setActiveFocusTask(task);
+    setTodayData({
+      ...todayData,
+      tasks: todayData.tasks.map((t) =>
+        t.id === task.id ? { ...t, status: 'in_progress' } : t
+      ),
+    });
+    // Remove the open loop
+    setOpenLoops(openLoops.filter((loop) => loop.id !== openLoop.id));
+  };
+
+  const handleCompleteOpenLoop = (openLoop: OpenLoop) => {
+    if (!todayData) return;
+
+    // Mark task as done
+    setTodayData({
+      ...todayData,
+      tasks: todayData.tasks.map((t) =>
+        t.id === openLoop.taskId ? { ...t, status: 'done' } : t
+      ),
+    });
+
+    // Remove the open loop
+    setOpenLoops(openLoops.filter((loop) => loop.id !== openLoop.id));
+  };
+
+  const handleDismissOpenLoop = (openLoop: OpenLoop) => {
+    // Just remove the open loop without changing task status
+    setOpenLoops(openLoops.filter((loop) => loop.id !== openLoop.id));
+  };
+
+  // Work Log Handler
+  const handleAddWorkLog = async (logInput: {
+    type: WorkLog['type'];
+    relatedTaskId?: string;
+    description: string;
+  }) => {
+    try {
+      const newLog = await addWorkLog(logInput);
+      setWorkLogs([...workLogs, newLog]);
+    } catch (error) {
+      console.error('Failed to add work log:', error);
+    }
+  };
+
+  // Blocker Handlers
+  const handleAddBlocker = async (blockerInput: {
+    relatedTaskId?: string;
+    description: string;
+  }) => {
+    try {
+      const newBlocker = await addBlocker(blockerInput);
+      setBlockers([...blockers, newBlocker]);
+
+      // If blocker is related to a task, update task status to blocked
+      if (blockerInput.relatedTaskId && todayData) {
+        const task = todayData.tasks.find((t) => t.id === blockerInput.relatedTaskId);
+        if (task) {
+          // Update task status to blocked
+          setTodayData({
+            ...todayData,
+            tasks: todayData.tasks.map((t) =>
+              t.id === blockerInput.relatedTaskId ? { ...t, status: 'blocked' } : t
+            ),
+          });
+
+          // Add or update open loop for the blocked task
+          const existingLoop = openLoops.find((loop) => loop.taskId === blockerInput.relatedTaskId);
+          if (!existingLoop) {
+            const newOpenLoop: OpenLoop = {
+              id: `loop-${Date.now()}`,
+              taskId: task.id,
+              taskTitle: task.title,
+              status: 'blocked',
+              currentState: 'Task is blocked',
+              nextAction: blockerInput.description,
+              blocker: blockerInput.description,
+              createdAt: new Date().toISOString(),
+            };
+            setOpenLoops([...openLoops, newOpenLoop]);
+          } else {
+            // Update existing open loop to blocked status
+            setOpenLoops(
+              openLoops.map((loop) =>
+                loop.taskId === blockerInput.relatedTaskId
+                  ? { ...loop, status: 'blocked', blocker: blockerInput.description }
+                  : loop
+              )
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add blocker:', error);
+    }
+  };
+
+  const handleResolveBlocker = async (blockerId: string) => {
+    try {
+      const resolvedBlocker = await resolveBlocker(blockerId);
+      
+      // Update blocker in state
+      setBlockers(
+        blockers.map((b) =>
+          b.id === blockerId
+            ? { ...b, status: 'resolved', resolvedAt: resolvedBlocker.resolvedAt }
+            : b
+        )
+      );
+
+      // Find the blocker to get related task
+      const blocker = blockers.find((b) => b.id === blockerId);
+      if (blocker?.relatedTaskId && todayData) {
+        const task = todayData.tasks.find((t) => t.id === blocker.relatedTaskId);
+        if (task && task.status === 'blocked') {
+          // Move task back to todo or paused
+          const newStatus = task.status === 'blocked' ? 'todo' : task.status;
+          setTodayData({
+            ...todayData,
+            tasks: todayData.tasks.map((t) =>
+              t.id === blocker.relatedTaskId ? { ...t, status: newStatus } : t
+            ),
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to resolve blocker:', error);
+    }
+  };
+
+  // Daily Summary Handlers
+  const handleGenerateDailySummary = async () => {
+    if (!todayData) return;
+
+    setIsGeneratingSummary(true);
+    try {
+      const generatedSummary = await generateDailySummary({
+        tasks: todayData.tasks,
+        workLogs,
+        blockers,
+        openLoops,
+      });
+      setDailySummary(generatedSummary);
+    } catch (error) {
+      console.error('Failed to generate daily summary:', error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleSaveDailySummary = (summary: DailySummary) => {
+    setDailySummary(summary);
+  };
+
+  const handleSubmitDailySummary = (summary: DailySummary) => {
+    setDailySummary(summary);
+  };
+
+  // Weekly Summary Handlers
+  const handleGenerateWeeklySummary = async () => {
+    if (!todayData) return;
+
+    setIsGeneratingWeeklySummary(true);
+    try {
+      const generatedSummary = await generateWeeklySummary({
+        dailySummaries: dailySummary ? [dailySummary] : undefined,
+        tasks: todayData.tasks,
+        workLogs,
+      });
+      setWeeklySummary(generatedSummary);
+    } catch (error) {
+      console.error('Failed to generate weekly summary:', error);
+    } finally {
+      setIsGeneratingWeeklySummary(false);
+    }
+  };
+
+  const handleSaveWeeklySummary = (summary: WeeklySummary) => {
+    setWeeklySummary(summary);
+  };
+
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -274,9 +503,9 @@ export default function TodayDashboard() {
 
   const stats = {
     todaysWork: todayData?.tasks.length || 0,
-    activeFocus: focusSession ? 1 : 0,
+    activeFocus: activeFocusTask ? 1 : 0,
     openLoops: openLoops.length,
-    blockers: todayData?.blockers.filter(b => b.status === 'active').length || 0,
+    blockers: blockers.filter(b => b.status === 'active').length,
   };
 
   return (
@@ -294,19 +523,19 @@ export default function TodayDashboard() {
           
           <div className="stat-card">
             <div className="stat-label">Active Focus</div>
-            <div className="stat-value text-violet-400">{stats.activeFocus}</div>
+            <div className="stat-value" style={{ color: 'var(--muted-accent)' }}>{stats.activeFocus}</div>
             <div className="text-xs text-muted">Focus session</div>
           </div>
           
           <div className="stat-card">
             <div className="stat-label">Open Loops</div>
-            <div className="stat-value text-amber-400">{stats.openLoops}</div>
+            <div className="stat-value text-warning">{stats.openLoops}</div>
             <div className="text-xs text-muted">Unfinished work</div>
           </div>
           
           <div className="stat-card">
             <div className="stat-label">Blockers</div>
-            <div className="stat-value text-rose-400">{stats.blockers}</div>
+            <div className="stat-value text-danger">{stats.blockers}</div>
             <div className="text-xs text-muted">Active blockers</div>
           </div>
         </div>
@@ -330,6 +559,7 @@ export default function TodayDashboard() {
                 tasks={todayData?.tasks || []}
                 onSetFocus={handleSetFocus}
                 onMarkDone={handleMarkDone}
+                onToggleComplete={handleToggleComplete}
               />
             </div>
 
@@ -367,96 +597,61 @@ export default function TodayDashboard() {
                   Manual notes about what you're working on
                 </p>
               </div>
-              <div className="section-placeholder">
-                <div className="section-placeholder-icon">📝</div>
-                <p className="section-placeholder-text">
-                  Add work log entries to track your progress
-                </p>
+              <div className="mb-4">
+                <WorkLogComposer
+                  tasks={todayData?.tasks || []}
+                  onAddLog={handleAddWorkLog}
+                />
               </div>
+              <WorkLogFeed
+                workLogs={workLogs}
+                tasks={todayData?.tasks || []}
+              />
             </div>
           </div>
 
           {/* Right Sidebar */}
           <div className="space-y-6">
-            {/* AI Assistant Panel */}
-            <div className="card bg-gradient-to-br from-blue-500/10 to-violet-500/10 border-blue-500/20">
-              <div className="card-header">
-                <h2 className="card-title">✨ AI Assistant</h2>
-                <p className="card-subtitle">
-                  Generate summaries from your work
-                </p>
-              </div>
-              <div className="space-y-3">
-                <p className="text-sm text-muted leading-relaxed">
-                  AI will turn your work logs, focus sessions, blockers, and open loops 
-                  into a clean daily summary.
-                </p>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    className="btn btn-primary w-full"
-                    onClick={() => console.log('Generate Daily Summary')}
-                  >
-                    Generate Daily Summary
-                  </button>
-                  <button 
-                    className="btn btn-secondary w-full"
-                    onClick={() => console.log('Generate Weekly Summary')}
-                  >
-                    Generate Weekly Summary
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Daily Summary Section */}
+            <DailySummaryEditor
+              dailySummary={dailySummary}
+              tasks={todayData?.tasks || []}
+              workLogs={workLogs}
+              blockers={blockers}
+              openLoops={openLoops}
+              onGenerate={handleGenerateDailySummary}
+              onSave={handleSaveDailySummary}
+              onSubmit={handleSubmitDailySummary}
+              isGenerating={isGeneratingSummary}
+            />
+
+            {/* Weekly Summary Section */}
+            <WeeklySummaryEditor
+              weeklySummary={weeklySummary}
+              dailySummary={dailySummary}
+              tasks={todayData?.tasks || []}
+              workLogs={workLogs}
+              onGenerate={handleGenerateWeeklySummary}
+              onSave={handleSaveWeeklySummary}
+              isGenerating={isGeneratingWeeklySummary}
+            />
 
             {/* Blockers Section */}
-            <div className="card">
-              <div className="card-header">
-                <h2 className="card-title">🚧 Blockers</h2>
-                <p className="card-subtitle">
-                  Track what's blocking your progress
-                </p>
-              </div>
-              <div className="section-placeholder">
-                <div className="section-placeholder-icon">🚧</div>
-                <p className="section-placeholder-text">
-                  No active blockers
-                </p>
-              </div>
-            </div>
+            <BlockerPanel
+              blockers={blockers}
+              tasks={todayData?.tasks || []}
+              onAddBlocker={handleAddBlocker}
+              onResolveBlocker={handleResolveBlocker}
+            />
 
             {/* Open Loops Section */}
-            <div className="card">
-              <div className="card-header">
-                <h2 className="card-title">🔄 Open Loops</h2>
-                <p className="card-subtitle">
-                  Paused tasks and next actions
-                </p>
-              </div>
-              <div className="section-placeholder">
-                <div className="section-placeholder-icon">🔄</div>
-                <p className="section-placeholder-text">
-                  No open loops
-                </p>
-              </div>
-            </div>
-
-            {/* Summary Actions Section */}
-            <div className="card">
-              <div className="card-header">
-                <h2 className="card-title">📊 Summaries</h2>
-                <p className="card-subtitle">
-                  View and edit your summaries
-                </p>
-              </div>
-              <div className="space-y-2">
-                <button className="btn btn-outline w-full text-sm">
-                  View Daily Summary
-                </button>
-                <button className="btn btn-outline w-full text-sm">
-                  View Weekly Summary
-                </button>
-              </div>
-            </div>
+            <OpenLoopsPanel
+              openLoops={openLoops}
+              tasks={todayData?.tasks || []}
+              onResume={handleResumeOpenLoop}
+              onComplete={handleCompleteOpenLoop}
+              onDismiss={handleDismissOpenLoop}
+            />
           </div>
         </div>
       </div>

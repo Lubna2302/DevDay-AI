@@ -191,8 +191,9 @@ export const mockTodayData: TodayData = {
   workLogs: mockWorkLogs,
   blockers: mockBlockers,
   openLoops: mockOpenLoops,
-  dailySummary: mockDailySummary,
-  weeklySummary: mockWeeklySummary,
+  // Start with no summaries - user will generate them
+  dailySummary: undefined,
+  weeklySummary: undefined,
 };
 
 // Made with Bob

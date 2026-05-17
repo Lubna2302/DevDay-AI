@@ -8,9 +8,10 @@ interface TaskListProps {
   tasks: Task[];
   onSetFocus?: (task: Task) => void;
   onMarkDone?: (taskId: string) => void;
+  onToggleComplete?: (taskId: string, currentStatus: string) => void;
 }
 
-export default function TaskList({ tasks, onSetFocus, onMarkDone }: TaskListProps) {
+export default function TaskList({ tasks, onSetFocus, onMarkDone, onToggleComplete }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <div className="section-placeholder">
@@ -39,7 +40,7 @@ export default function TaskList({ tasks, onSetFocus, onMarkDone }: TaskListProp
       {sortedSources.map((source) => (
         <div key={source}>
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-muted uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-foreground-muted uppercase tracking-wide">
               {getSourceLabel(source)}
             </h3>
             <div className="flex-1 h-px bg-card-border"></div>
@@ -55,6 +56,7 @@ export default function TaskList({ tasks, onSetFocus, onMarkDone }: TaskListProp
                 task={task}
                 onSetFocus={onSetFocus}
                 onMarkDone={onMarkDone}
+                onToggleComplete={onToggleComplete}
               />
             ))}
           </div>

@@ -1,0 +1,117 @@
+# DevDay AI Backend - Application Configuration
+# Spring Boot 3.2.x
+
+spring:
+  application:
+    name: devday-ai-backend
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/devday_ai
+    username: ${DB_USERNAME:devday}
+    password: ${DB_PASSWORD:devday123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Flyway handles schema, Hibernate only validates
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+  
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+  
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+    default-property-inclusion: non_null
+
+# Server Configuration
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api  # All endpoints prefixed with /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+
+# CORS Configuration
+cors:
+  allowed-origins:
+    - http://localhost:3000  # React dev server
+    - http://localhost:5173  # Vite dev server
+    - http://localhost:4200  # Angular dev server
+  allowed-methods:
+    - GET
+    - POST
+    - PATCH
+    - DELETE
+    - OPTIONS
+  allowed-headers:
+    - Authorization
+    - Content-Type
+    - Accept
+    - X-Requested-With
+  exposed-headers:
+    - Authorization
+  allow-credentials: true
+  max-age: 3600
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:change-this-secret-in-production-use-at-least-256-bits-for-security}
+  expiration: 86400000  # 24 hours in milliseconds
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.devday: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  file:
+    name: logs/devday-ai.log
+
+# Actuator Configuration (for health checks)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  health:
+    db:
+      enabled: true
+
+# Application Info
+app:
+  name: DevDay AI
+  version: 1.0.0
+  description: Developer Productivity Assistant
+
+# Made with Bob

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: devday-postgres
+    environment:
+      POSTGRES_DB: devday_ai
+      POSTGRES_USER: devday
+      POSTGRES_PASSWORD: devday123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devday -d devday_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devday-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  devday-network:
+    driver: bridge
+
+# Made with Bob

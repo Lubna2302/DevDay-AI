@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DevDay AI Frontend
 
-## Getting Started
+Next.js frontend for **DevDay AI**, a developer-first productivity assistant for managing daily work, focus sessions, blockers, open loops, work logs, and AI-generated summaries.
 
-First, run the development server:
+Live demo: [https://dev-day-ai.vercel.app/](https://dev-day-ai.vercel.app/)
+
+---
+
+## Tech Stack
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Axios
+
+---
+
+## Run Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```txt
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Main UI Areas
 
-To learn more about Next.js, take a look at the following resources:
+- Today Dashboard
+- Task list and manual task entry
+- Active Focus and focus sessions
+- Switch Guard modal
+- Work log composer and feed
+- Blocker panel
+- Open Loops panel
+- Daily Summary editor
+- Weekly Summary editor
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The frontend is structured with mock/service boundaries so the UI can work independently and later connect cleanly to the Spring Boot backend APIs.

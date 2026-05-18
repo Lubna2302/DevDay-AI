@@ -1,357 +1,424 @@
-# DevDay AI - Your Private Developer Workday Assistant
+<div align="center">
 
-> A full-stack application that helps developers manage their daily work from Jira, GitHub, Calendar, and Teams in one unified dashboard. Track focus sessions, manage blockers, and generate AI-powered summaries.
+# 🚀 DevDay AI
 
-[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green.svg)](https://spring.io/projects/spring-boot)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
+### Your private developer workday assistant
+
+**Plan your day. Stay focused. Capture context. Generate your report.**
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-dev--day--ai.vercel.app-D6FF6B?style=for-the-badge&logo=vercel&logoColor=black)](https://dev-day-ai.vercel.app/)
+[![Built with IBM BOB](https://img.shields.io/badge/Built%20with-IBM%20BOB-0f62fe?style=for-the-badge)](#-how-we-used-ibm-bob)
+[![Next.js](https://img.shields.io/badge/Next.js-Frontend-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-Backend-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+
+🌐 **Live App:** [https://dev-day-ai.vercel.app/](https://dev-day-ai.vercel.app/)
+
+</div>
 
 ---
 
-## 🚀 Quick Start
+## ✨ What Is DevDay AI?
 
-### Prerequisites
-- **Java 17** (JDK)
-- **Maven 3.9+**
-- **Docker Desktop** (for PostgreSQL)
-- **Node.js 20.9+** (required for Next.js 16)
+**DevDay AI** is a developer-first productivity assistant that brings daily engineering work into one focused dashboard.
 
-### One-Command Startup
+Developers can manage tasks, PRs, meetings, blockers, open loops, work logs, focus sessions, and AI-generated reports without feeling monitored.
 
-```powershell
-# Start everything (PostgreSQL, Backend, Frontend)
-.\start-fullstack.ps1
+It is designed as a **private developer work journal**, not an employee surveillance tool.
 
-# Or start manually:
-# Terminal 1 - Backend
-cd Backend
-docker compose up -d
-.\run-dev.ps1
+> DevDay AI helps developers end the day with clarity.
 
-# Terminal 2 - Frontend
-cd frontend
-npm install
-npm run dev
+---
+
+## 🧩 The Problem
+
+Developers do not only work on Jira tickets.
+
+A real developer day includes:
+
+- 🎫 Jira tasks
+- 🔀 Pull request reviews
+- 📅 Meetings
+- 💬 Teams discussions
+- 🧠 Debugging
+- 🧑‍🤝‍🧑 Helping teammates
+- 🚧 Blockers
+- 🔍 Research
+- 🤖 AI/Cursor-assisted coding
+- 🧵 Half-finished tasks and context switches
+
+By the end of the day, work is scattered and developers often struggle to answer:
+
+> What did I actually complete today?
+
+---
+
+## 💡 Our Solution
+
+DevDay AI gives developers a single **Today Dashboard** where they can:
+
+- see all work in one place
+- choose one active focus task
+- avoid task-jumping with Switch Guard
+- capture resume notes through Open Loops
+- log meaningful work manually
+- track blockers
+- generate editable daily and weekly AI summaries
+
+---
+
+## 🖥️ Live Demo
+
+🔗 **Try it here:** [https://dev-day-ai.vercel.app/](https://dev-day-ai.vercel.app/)
+
+If demo authentication is enabled:
+
+```txt
+Email: demo@devday.ai
+Password: demo123
 ```
 
-### Access the Application
+---
 
-1. Open **http://localhost:3000**
-2. Login with demo credentials:
-   - **Email:** `demo@devday.ai`
-   - **Password:** `demo123`
+## 🏆 Key Features
+
+### 🗂️ Today Dashboard
+
+One command center for:
+
+- tasks
+- PRs
+- meetings
+- blockers
+- manual logs
+- open loops
+- summaries
+
+### 🎯 Focus Sessions
+
+Developers choose one active task and define a goal before working.
+
+The app does not force a schedule. The developer stays in control.
+
+### 🛡️ Switch Guard
+
+Our key productivity feature.
+
+When a developer tries to switch tasks, DevDay AI asks them to:
+
+- ✅ complete the current task
+- 📝 pause with a resume note
+- 🚧 mark it blocked
+- ↪️ switch intentionally
+
+This prevents unfinished work from disappearing.
+
+### 🧵 Open Loops
+
+Open Loops preserve context for unfinished tasks.
+
+Each open loop can store:
+
+- current state
+- next action
+- blocker
+- task context
+
+### 📝 Manual Work Logs
+
+Capture work that tools usually miss:
+
+- debugging
+- PR reviews
+- meetings
+- research
+- documentation
+- teammate help
+- production support
+
+### 🤖 AI Daily Summary
+
+Generate an editable daily report from:
+
+- tasks
+- work logs
+- blockers
+- focus sessions
+- open loops
+
+### 📈 AI Weekly Summary
+
+Create outcome-focused weekly summaries that avoid low-level technical noise.
+
+Instead of:
+
+```txt
+Added a class
+Changed a method
+```
+
+DevDay AI writes:
+
+```txt
+Improved login reliability
+Progressed payment workflow investigation
+Tracked backend API clarification blocker
+```
 
 ---
 
-## ✨ Features
+## 🛠️ Tech Stack
 
-### ✅ Fully Functional (Live API)
+### Frontend
 
-- **Authentication** - JWT-based login and registration
-- **Today Dashboard** - Aggregated view of all daily activities
-- **Task Management** - Tasks from Jira, GitHub, Calendar, Teams, and manual entry
-- **Focus Sessions** - Track focused work periods with goals and duration
-- **Work Logs** - Log non-task work (debugging, meetings, helping teammates)
-- **Blockers** - Track and resolve impediments
-- **Open Loops** - Context preservation when switching tasks
-- **Switch Guard** - Prevents accidental task switching with context capture
+| Technology | Purpose |
+|---|---|
+| Next.js | React framework |
+| React | UI components |
+| TypeScript | Type safety |
+| Tailwind CSS | Styling |
+| Axios | API communication |
 
-### ⏳ Coming Soon
+### Backend
 
-- **AI Summaries** - Daily and weekly summaries powered by IBM watsonx.ai
-- **Real Integration Sync** - Live sync with Jira, GitHub, Calendar, Teams
-- **IBM BOB Integration** - Webhook integration for BOB assistant
+| Technology | Purpose |
+|---|---|
+| Java 17 | Backend language |
+| Spring Boot | REST API backend |
+| PostgreSQL | Database |
+| Hibernate / JPA | ORM |
+| Flyway | Database migrations |
+| Spring Security | Authentication |
+| JWT | Secure sessions |
+
+### AI + Tools
+
+| Tool | Usage |
+|---|---|
+| IBM BOB | AI-assisted development |
+| IBM watsonx.ai | Planned AI summary integration |
+| GitHub Copilot | AI coding support |
+| Docker | Local services |
+| Vercel | Frontend deployment |
 
 ---
 
 ## 🏗️ Architecture
 
-### Backend
-- **Framework:** Spring Boot 3.2.x
-- **Language:** Java 17
-- **Database:** PostgreSQL 15
-- **ORM:** Hibernate/JPA
-- **Migrations:** Flyway
-- **Security:** JWT with Spring Security
-- **API:** RESTful with JSON
+```txt
+Next.js Frontend
+        |
+        v
+Spring Boot REST API
+        |
+        v
+PostgreSQL Database
+        |
+        v
+MCP / API Connector Layer
+  - Jira
+  - GitHub / Bitbucket
+  - Calendar
+  - Microsoft Teams
+        |
+        v
+AI Summary Service
+```
+
+For the hackathon MVP, some integration data can be mocked while keeping clean service boundaries for real integrations later.
+
+---
+
+## 🔁 Product Flow
+
+```txt
+Import daily work
+        ↓
+Choose active focus
+        ↓
+Log progress
+        ↓
+Track blockers
+        ↓
+Close open loops
+        ↓
+Generate AI summary
+        ↓
+Edit and share
+```
+
+---
+
+## 📁 Project Structure
+
+```txt
+DevDay-AI-main/
+  frontend/
+    src/
+      app/
+      components/
+        dashboard/
+        tasks/
+        focus/
+        worklog/
+        blockers/
+        openloops/
+        summary/
+      mock/
+      services/
+      types/
+      utils/
+
+  Backend/
+    src/
+    docker-compose.yml
+
+  bob_sessions/
+    exported IBM BOB task history files
+    consumption summary screenshots
+```
+
+---
+
+## 🚀 Run Locally
 
 ### Frontend
-- **Framework:** Next.js 16.2.6
-- **Language:** TypeScript 5
-- **UI:** React 19.2.4
-- **Styling:** Tailwind CSS 4
-- **HTTP Client:** Axios
-- **State:** React Hooks
-
-### Database Schema
-```
-users
-├── tasks (JIRA, GitHub, Calendar, Teams, Manual)
-├── focus_sessions (goal tracking, duration)
-├── work_logs (categorized activities)
-├── blockers (impediment tracking)
-└── open_loops (context preservation)
-```
-
----
-
-## 📚 Documentation
-
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete local setup and deployment guide
-- **[PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)** - Production deployment with Docker, Kubernetes, and cloud platforms
-- **[FULLSTACK_DEMO.md](FULLSTACK_DEMO.md)** - Quick demo walkthrough
-- **[Backend/IMPLEMENTATION_COMPLETE.md](Backend/IMPLEMENTATION_COMPLETE.md)** - Backend implementation details
-- **[Backend/API_QUICK_REFERENCE.md](Backend/API_QUICK_REFERENCE.md)** - API endpoint reference
-- **[Backend/IBM_BOB_INTEGRATION_SPEC.md](Backend/IBM_BOB_INTEGRATION_SPEC.md)** - BOB integration specification
-
----
-
-## 🔧 Configuration
-
-### Backend Configuration
-
-**Environment Variables** (Backend/.env):
-```bash
-DB_USERNAME=devday
-DB_PASSWORD=devday123
-JWT_SECRET=change-this-secret-in-production
-```
-
-**Key Files:**
-- [`Backend/src/main/resources/application.yml`](Backend/src/main/resources/application.yml) - Main configuration
-- [`Backend/docker-compose.yml`](Backend/docker-compose.yml) - PostgreSQL setup
-
-### Frontend Configuration
-
-**Environment Variables** (frontend/.env.local):
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
-```
-
----
-
-## 🧪 Testing
-
-### Manual Testing
-
-1. **Login** with demo credentials
-2. **View Dashboard** - See 6 seeded tasks
-3. **Create Task** - Add manual task
-4. **Start Focus** - Begin focus session
-5. **Add Work Log** - Log work activity
-6. **Create Blocker** - Track impediment
-7. **Pause Focus** - Switch tasks with context
-
-### API Testing
 
 ```bash
-# Health check
-curl http://localhost:8080/api/actuator/health
-
-# Login
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@devday.ai","password":"demo123"}'
-
-# Get today's data
-curl -X GET http://localhost:8080/api/today \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+cd frontend
+npm install
+npm run dev
 ```
 
----
+Open:
 
-## 📊 API Endpoints
+```txt
+http://localhost:3000
+```
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login and get JWT token
+### Backend
 
-### Dashboard
-- `GET /api/today` - Get aggregated today data
-
-### Tasks
-- `POST /api/tasks` - Create manual task
-- `PATCH /api/tasks/{id}/status` - Update task status
-
-### Focus Sessions
-- `POST /api/focus-sessions/start` - Start focus session
-- `GET /api/focus-sessions/active` - Get active session
-- `POST /api/focus-sessions/{id}/complete` - Complete session
-- `POST /api/focus-sessions/{id}/pause` - Pause with context
-
-### Work Logs
-- `POST /api/work-logs` - Create work log
-- `GET /api/work-logs/today` - Get today's logs
-
-### Blockers
-- `POST /api/blockers` - Create blocker
-- `POST /api/blockers/{id}/resolve` - Resolve blocker
-
-Full API documentation: [Backend/API_QUICK_REFERENCE.md](Backend/API_QUICK_REFERENCE.md)
-
----
-
-## 🐛 Troubleshooting
-
-### Backend Issues
-
-**Database connection failed:**
 ```powershell
 cd Backend
-docker compose ps
-docker compose up -d
-```
-
-**Empty tasks after login:**
-```powershell
-# Reset database to re-seed demo data
-cd Backend
-docker compose down -v
 docker compose up -d
 .\run-dev.ps1
 ```
 
-### Frontend Issues
+Backend runs on:
 
-**CORS errors:**
-```bash
-# Verify frontend/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
-```
-
-**401 Unauthorized:**
-- Sign out and sign in again
-- Clear localStorage if needed
-
-**Module not found:**
-```bash
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
+```txt
+http://localhost:8080
 ```
 
 ---
 
-## 🚢 Deployment
+## 🔐 Privacy First
 
-### Local Development
-```powershell
-.\start-fullstack.ps1
+DevDay AI is not an employee tracker.
+
+It does **not** include:
+
+- ❌ screenshot tracking
+- ❌ keystroke tracking
+- ❌ raw browser history tracking
+- ❌ private message reading
+- ❌ Cursor prompt spying
+- ❌ minute-by-minute monitoring
+
+Developers review and edit summaries before sharing.
+
+---
+
+## 🤖 How We Used IBM BOB
+
+IBM BOB was used as a real development partner during the hackathon.
+
+BOB helped with:
+
+- 🧠 project architecture planning
+- ⚛️ React component generation
+- 🧾 TypeScript type design
+- 🧪 mock data and service-layer planning
+- 🎯 focus workflow implementation
+- 🛡️ Switch Guard debugging
+- 🎨 UI polish and animations
+- ☕ Spring Boot API planning
+- 📚 README and presentation preparation
+
+Hackathon-required BOB exports are included in:
+
+```txt
+bob_sessions/
 ```
 
-### Production Options
+This folder should contain:
 
-1. **Cloud Platforms** (Recommended)
-   - Backend: AWS Elastic Beanstalk / Azure App Service / Google Cloud Run
-   - Frontend: Vercel / Netlify / AWS Amplify
-   - Database: AWS RDS / Azure Database / Google Cloud SQL
-
-2. **Docker Compose**
-   - Simple setup for small teams
-   - See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
-
-3. **Kubernetes**
-   - Full control and scalability
-   - See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)
+- exported `.md` task histories
+- screenshots of task consumption summaries
 
 ---
 
-## 🔐 Security
+## 🧪 Core Demo Flow
 
-### Development
-- Demo credentials: `demo@devday.ai` / `demo123`
-- Default JWT secret (change in production!)
-
-### Production Checklist
-- [ ] Generate strong JWT secret (256+ bits)
-- [ ] Configure HTTPS/TLS
-- [ ] Set up secrets management
-- [ ] Restrict CORS origins
-- [ ] Enable rate limiting
-- [ ] Configure firewall rules
-- [ ] Enable database SSL
-- [ ] Review security headers
-
-See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for complete security guide.
+1. Open the Today Dashboard.
+2. View tasks from Jira, GitHub/Bitbucket, Calendar, Teams, and manual entries.
+3. Select `AUTH-231` as active focus.
+4. Start a focus session.
+5. Add a work log.
+6. Try switching to another task.
+7. Use Switch Guard to pause with a resume note.
+8. See the task appear in Open Loops.
+9. Add a blocker.
+10. Generate a Daily Summary.
+11. Edit and submit the summary.
+12. Generate a Weekly Summary.
 
 ---
 
-## 📈 Roadmap
+## 🗺️ Roadmap
 
-### High Priority
-- [ ] IBM watsonx.ai integration for AI summaries
-- [ ] IBM BOB webhook integration
-- [ ] Real-time Jira sync
-- [ ] Real-time GitHub sync
-
-### Medium Priority
-- [ ] Calendar integration (Google, Outlook)
-- [ ] Teams integration
-- [ ] Advanced analytics dashboard
-- [ ] Team collaboration features
-
-### Low Priority
-- [ ] Dark mode
-- [ ] Keyboard shortcuts
-- [ ] Mobile app
-- [ ] Browser extension
+- [ ] IBM watsonx.ai integration
+- [ ] Real Jira sync
+- [ ] GitHub / Bitbucket integration
+- [ ] Calendar integration
+- [ ] Microsoft Teams integration
+- [ ] Team lead dashboard
+- [ ] Export summaries to Teams, Slack, or email
+- [ ] Personal productivity insights
 
 ---
 
-## 🤝 Contributing
+## 📌 Project Status
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+✅ Hackathon MVP ready  
+✅ Frontend deployed  
+✅ Focus workflow implemented  
+✅ Switch Guard implemented  
+✅ Work logs, blockers, open loops implemented  
+✅ Daily and weekly summaries implemented  
+✅ IBM BOB session exports prepared  
 
 ---
 
-## 🙏 Acknowledgments
+## 🎤 Elevator Pitch
 
-- Built for the IBM BOB Hackathon
-- Powered by Spring Boot, Next.js, and PostgreSQL
-- UI components inspired by modern design systems
-- Demo data seeding for easy testing
+**DevDay AI helps developers turn a scattered workday into a clear, focused workflow.**
 
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) troubleshooting section
-2. Review [Backend/API_TESTING_GUIDE.md](Backend/API_TESTING_GUIDE.md)
-3. Check application logs:
-   - Backend: `Backend/logs/devday-ai.log`
-   - Frontend: Browser console
-4. Open an issue on GitHub
+It brings tasks, meetings, blockers, work logs, and summaries into one private dashboard, preserves context through Switch Guard and Open Loops, and generates editable AI reports at the end of the day.
 
 ---
 
-## 🎯 Project Status
+## 🙌 Acknowledgments
 
-**Current Status:** ✅ **Production Ready for Demo**
-
-- ✅ Authentication and authorization
-- ✅ Core task management
-- ✅ Focus session tracking
-- ✅ Work log management
-- ✅ Blocker tracking
-- ✅ Open loop context preservation
-- ⏳ AI summary generation (mock data)
-- ⏳ Real integration sync (mock data)
+Built for the **IBM BOB Hackathon** with IBM BOB as an AI coding and planning assistant.
 
 ---
 
-**Made with Bob 🤖**
+<div align="center">
 
-*DevDay AI - Making developers more productive, one focus session at a time.*
+### DevDay AI
+
+**Private by design. Useful by default.**
+
+[🌐 Live Demo](https://dev-day-ai.vercel.app/)
+
+</div>
